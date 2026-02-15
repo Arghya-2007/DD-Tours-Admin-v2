@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* v4 THEME CONFIGURATION 
+  We define our "Dark & Dangerous" variables here.
+  Tailwind automatically creates utilities like 'bg-dd-bg' or 'text-dd-orange' from these.
+*/
+@theme {
+  /* BACKGROUNDS */
+  --color-dd-bg: #1a1a1a;       /* Main Background */
+  --color-dd-sidebar: #121212;  /* Sidebar Background */
+  --color-dd-card: #242424;     /* Card Background */
+
+  /* BRAND GRADIENTS */
+  --color-dd-orange: #FF5733;   /* Sunset Orange */
+  --color-dd-red: #C70039;      /* Deep Red */
+
+  /* STATUS */
+  --color-dd-success: #00C853;  /* System Online */
+  --color-dd-danger: #FF1744;   /* Error/Delete */
+
+  /* TEXT */
+  --color-dd-text-main: #E0E0E0;
+  --color-dd-text-muted: #A0A0A0;
+
+  /* FONTS */
+  --font-sans: 'Inter', sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-dd-sidebar);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-dd-card);
+  border-radius: 9999px;
+  border: 1px solid var(--color-dd-sidebar);
+}
