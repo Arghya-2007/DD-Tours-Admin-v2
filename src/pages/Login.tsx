@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { Lock, Mail, Loader2 } from 'lucide-react';
 
 const Login = () => {
-    const { setAuth, isAuthenticated, auth } = useContext(AuthContext);
+    const { setAuth, auth } = useContext(AuthContext);
 
     const navigate = useNavigate();
     const location = useLocation();
