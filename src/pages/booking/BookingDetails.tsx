@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, MapPin, User, Mail, Phone, CreditCard, Users, Download, Loader2
+    ArrowLeft, MapPin, User, Mail, Phone, CreditCard, Users, Download, Loader2,
+    CheckCircle2, XCircle, DollarSign, Trash2 // 👈 Added action icons
 } from 'lucide-react';
 import useAxiosPrivate from '../../hooks/useAxiosPrivate.ts';
 import toast from 'react-hot-toast';
@@ -30,7 +31,7 @@ interface BookingDetail {
     tour: {
         tourTitle: string;
         tourDuration: string;
-        startLocation?: string; // 👈 Ensure this matches backend
+        startLocation?: string;
         tourPrice: number;
     };
 }
@@ -43,25 +44,58 @@ const BookingDetails = () => {
     const [loading, setLoading] = useState(true);
     const [downloading, setDownloading] = useState(false);
 
-    useEffect(() => {
-        const fetchDetails = async () => {
-            try {
-                const response = await axiosPrivate.get(`/bookings/${id}`);
-                setBooking(response.data.data);
-                if (booking?.tour.startLocation){
-                    console.log(booking.tour.startLocation);
-                }else {
-                    console.log("no data")
-                }
-            } catch (error) {
-                toast.error("Failed to load booking details");
-                navigate('/bookings');
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchDetails();
+    // 🔄 EXTRACTED FETCH FUNCTION: So we can refresh the page after taking an action
+    const fetchDetails = useCallback(async () => {
+        try {
+            const response = await axiosPrivate.get(`/bookings/${id}`);
+            setBooking(response.data.data);
+        } catch (error) {
+            toast.error("Failed to load booking details");
+            navigate('/bookings');
+        } finally {
+            setLoading(false);
+        }
     }, [id, axiosPrivate, navigate]);
+
+    useEffect(() => {
+        fetchDetails();
+    }, [fetchDetails]);
+
+    // ==========================================
+    // ⚡ ACTION BUTTON HANDLERS
+    // ==========================================
+    const updateBookingStatus = async (newStatus: string) => {
+        if(!window.confirm(`Mark booking as ${newStatus}?`)) return;
+        try {
+            await axiosPrivate.patch(`/bookings/${id}`, { bookingStatus: newStatus });
+            toast.success(`Updated to ${newStatus}`);
+            fetchDetails(); // Refresh the page UI instantly!
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Update failed');
+        }
+    };
+
+    const updatePaymentStatus = async () => {
+        if(!window.confirm("Confirm payment receipt?")) return;
+        try {
+            await axiosPrivate.patch(`/bookings/${id}/payment-status`, { paymentStatus: 'COMPLETED' });
+            toast.success("Payment confirmed 💰");
+            fetchDetails(); // Refresh the page UI instantly!
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Update failed');
+        }
+    };
+
+    const deleteBooking = async () => {
+        if(!window.confirm("⚠️ Delete permanently? This cannot be undone.")) return;
+        try {
+            await axiosPrivate.delete(`/bookings/${id}`);
+            toast.success("Deleted 🗑️");
+            navigate('/bookings'); // Kick them back to the table since this booking is gone
+        } catch (error: any) {
+            toast.error('Delete failed');
+        }
+    };
 
     // 🖨️ INVOICE GENERATOR FUNCTION
     const handleDownloadInvoice = async () => {
@@ -69,11 +103,9 @@ const BookingDetails = () => {
         setDownloading(true);
 
         try {
-            // 1. Fetch Invoice Data from Backend
             const response = await axiosPrivate.get(`/bookings/${booking.bookingId}/invoice`);
             const inv = response.data.data;
 
-            // 2. Generate HTML for the Invoice
             const invoiceHTML = `
                 <html>
                 <head>
@@ -154,7 +186,6 @@ const BookingDetails = () => {
                 </html>
             `;
 
-            // 3. Open Print Window
             const printWindow = window.open('', '_blank');
             if (printWindow) {
                 printWindow.document.write(invoiceHTML);
@@ -177,31 +208,49 @@ const BookingDetails = () => {
     return (
         <div className="max-w-5xl mx-auto space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
-                <button
-                    onClick={() => navigate('/bookings')}
-                    className="p-2 bg-dd-card rounded-lg border border-gray-700 hover:border-dd-orange transition-colors text-white"
-                >
-                    <ArrowLeft size={20} />
-                </button>
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Booking #{booking.bookingId.slice(0,8).toUpperCase()}</h1>
-                    <p className="text-dd-text-muted text-sm">Created on {new Date(booking.bookingDate).toLocaleString()}</p>
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/bookings')}
+                        className="p-2 bg-dd-card rounded-lg border border-gray-700 hover:border-dd-orange transition-colors text-white"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-bold text-white">Booking #{booking.bookingId.slice(0,8).toUpperCase()}</h1>
+                        <p className="text-dd-text-muted text-sm">Created on {new Date(booking.bookingDate).toLocaleString()}</p>
+                    </div>
                 </div>
-                <div className="ml-auto flex gap-3">
-                     <span className={`px-3 py-1 rounded-full text-sm font-bold border ${
-                         booking.bookingStatus === 'CONFIRMED' ? 'bg-green-900/30 text-green-400 border-green-800' :
-                             booking.bookingStatus === 'PENDING' ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800' :
-                                 'bg-red-900/30 text-red-400 border-red-800'
-                     }`}>
+
+                {/* 🆕 NEW ACTION BUTTONS ROW */}
+                <div className="md:ml-auto flex flex-wrap gap-3 items-center">
+
+                    {/* Admin Actions */}
+                    <div className="flex gap-2 bg-dd-card p-1.5 rounded-lg border border-gray-800">
+                        {booking.bookingStatus === 'PENDING' && (
+                            <>
+                                <button onClick={() => updateBookingStatus('CONFIRMED')} title="Confirm Booking" className="p-1.5 bg-green-500/10 text-green-500 rounded hover:bg-green-500/20"><CheckCircle2 size={18} /></button>
+                                <button onClick={() => updateBookingStatus('CANCELLED')} title="Cancel Booking" className="p-1.5 bg-red-500/10 text-red-500 rounded hover:bg-red-500/20"><XCircle size={18} /></button>
+                            </>
+                        )}
+                        {booking.paymentStatus === 'PENDING' && (
+                            <button onClick={updatePaymentStatus} title="Confirm Payment" className="p-1.5 bg-blue-500/10 text-blue-500 rounded hover:bg-blue-500/20"><DollarSign size={18} /></button>
+                        )}
+                        <button onClick={deleteBooking} title="Delete Booking" className="p-1.5 text-gray-400 hover:bg-red-500/10 hover:text-red-500 rounded transition-colors"><Trash2 size={18} /></button>
+                    </div>
+
+                    <span className={`px-3 py-1 rounded-full text-sm font-bold border ${
+                        booking.bookingStatus === 'CONFIRMED' ? 'bg-green-900/30 text-green-400 border-green-800' :
+                            booking.bookingStatus === 'PENDING' ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800' :
+                                'bg-red-900/30 text-red-400 border-red-800'
+                    }`}>
                         {booking.bookingStatus}
                      </span>
 
-                    {/* 👇 UPDATED INVOICE BUTTON */}
                     <button
                         onClick={handleDownloadInvoice}
                         disabled={downloading}
-                        className="flex items-center gap-2 bg-dd-orange text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 bg-dd-orange text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {downloading ? <Loader2 size={16} className="animate-spin"/> : <Download size={16} />}
                         {downloading ? "Generating..." : "Invoice"}
@@ -223,7 +272,6 @@ const BookingDetails = () => {
                             <h4 className="text-xl font-bold text-white">{booking.tour.tourTitle}</h4>
                             <div className="mt-2 grid grid-cols-2 gap-4 text-sm text-gray-400">
                                 <p>Duration: <span className="text-white">{booking.tour.tourDuration}</span></p>
-                                {/* 👇 FIXED START LOCATION DISPLAY */}
                                 <p>Start Location: <span className="text-white">{booking.tour.startLocation || "Not Specified"}</span></p>
                                 <p>Base Price: <span className="text-white">₹{booking.tour.tourPrice}</span> / person</p>
                             </div>
