@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { Lock, Mail, Loader2 } from 'lucide-react';
 
 const Login = () => {
-    const { setAuth, isAuthenticated, user } = useContext(AuthContext);
+    const { setAuth, isAuthenticated, auth } = useContext(AuthContext);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -21,11 +21,11 @@ const Login = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     // Auto-Redirect: If an Admin is already logged in, send them to the dashboard
-    useEffect(() => {
-        if (isAuthenticated && user?.role === "ADMIN") {
-            navigate(from, { replace: true });
-        }
-    }, [isAuthenticated, user, navigate, from]);
+   useEffect(() => {
+           if (auth?.accessToken && auth?.user?.role === "ADMIN") {
+               navigate(from, { replace: true });
+           }
+       }, [auth, navigate, from]);
 
     // GSAP Entrance Animation
     useEffect(() => {

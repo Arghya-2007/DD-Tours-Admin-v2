@@ -17,7 +17,8 @@ import toast from 'react-hot-toast';
 
 const AdminLayout = () => {
     // 🚨 Pull in your Zustand store & React Router navigation
-    const { user, logout } = useContext(AuthContext);
+    const { auth, logout } = useContext(AuthContext);
+    const user = auth?.user;
     const navigate = useNavigate();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
