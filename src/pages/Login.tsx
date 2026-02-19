@@ -57,7 +57,7 @@ const Login = () => {
             }
 
             // 1. Save to Zustand Store (Memory)
-            setAuth(loggedInUser, accessToken);
+           setAuth({ user: loggedInUser, accessToken });
 
             // 2. Success Feedback
             toast.success(`Welcome back, Commander ${loggedInUser.name}!`);
