@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'; // Removed 'React'
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
     Map,
@@ -7,11 +7,20 @@ import {
     Star,
     Image,
     Settings,
-    LogOut
+    LogOut,
+    Loader2
 } from 'lucide-react';
 import gsap from 'gsap';
+import axios from '../api/axios';
+import { useAuthStore } from '../store/authStore';
+import toast from 'react-hot-toast';
 
 const AdminLayout = () => {
+    // 🚨 Pull in your Zustand store & React Router navigation
+    const { user, logout } = useAuthStore();
+    const navigate = useNavigate();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
     const sidebarRef = useRef(null);
     const contentRef = useRef(null);
 
@@ -28,6 +37,26 @@ const AdminLayout = () => {
                 "-=0.3"
             );
     }, []);
+
+    // 🚨 The strict Logout Flow
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        try {
+            // 1. Tell the backend to destroy the cookie and blacklist the token
+            await axios.post('/auth/logout');
+        } catch (error) {
+            console.error("Backend logout failed, but proceeding with frontend logout.", error);
+        } finally {
+            // 2. Clear Zustand memory (happens no matter what)
+            logout();
+
+            // 3. User feedback
+            toast.success("System locked. See you next time!");
+
+            // 4. Kick back to login
+            navigate('/login', { replace: true });
+        }
+    };
 
     const navItems = [
         { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -63,13 +92,12 @@ const AdminLayout = () => {
                             <NavLink
                                 key={item.name}
                                 to={item.path}
-                                // FIX: Explicitly typed the destructuring here
                                 className={({ isActive }: { isActive: boolean }) => `
-                  flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group
-                  ${isActive
-                                    ? 'bg-gradient-to-r from-dd-orange/20 to-dd-red/10 text-dd-orange border-l-4 border-dd-orange'
-                                    : 'text-dd-text-muted hover:bg-gray-800 hover:text-white hover:translate-x-1'}
-                `}
+                                    flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group
+                                    ${isActive
+                                        ? 'bg-gradient-to-r from-dd-orange/20 to-dd-red/10 text-dd-orange border-l-4 border-dd-orange'
+                                        : 'text-dd-text-muted hover:bg-gray-800 hover:text-white hover:translate-x-1'}
+                                `}
                             >
                                 <item.icon size={20} />
                                 <span className="font-medium">{item.name}</span>
@@ -94,10 +122,18 @@ const AdminLayout = () => {
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 <header className="h-16 bg-dd-bg/50 backdrop-blur-md border-b border-gray-800 flex items-center justify-between px-8">
                     <div className="text-sm text-dd-text-muted">
-                        Welcome back, <span className="text-white font-semibold">Admin</span>
+                        {/* 🚨 Use the actual logged-in user's name */}
+                        Welcome back, <span className="text-white font-semibold">{user?.name || "Commander"}</span>
                     </div>
-                    <button className="flex items-center gap-2 text-sm text-dd-danger hover:bg-dd-danger/10 px-3 py-1.5 rounded-md transition-colors">
-                        <LogOut size={16} /> Logout
+
+                    {/* 🚨 Attach the logout handler */}
+                    <button
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="flex items-center gap-2 text-sm text-dd-danger hover:bg-dd-danger/10 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                    >
+                        {isLoggingOut ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
+                        {isLoggingOut ? "Locking..." : "Logout"}
                     </button>
                 </header>
 

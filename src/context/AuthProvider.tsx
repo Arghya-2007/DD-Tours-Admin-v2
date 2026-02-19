@@ -1,4 +1,6 @@
 import { createContext, useState, useEffect, type ReactNode } from "react";
+import axios from "../api/axios"; // Your configured axios instance
+import Loader from "../components/Loader";
 
 interface User {
     id: string;
@@ -14,66 +16,64 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-// Helper: Check if JWT is expired without external libraries
-const isTokenExpired = (token: string | null): boolean => {
-    if (!token) return true;
-    try {
-        // Decode the payload (2nd part of JWT)
-        const payloadBase64 = token.split('.')[1];
-        const decodedJson = atob(payloadBase64);
-        const payload = JSON.parse(decodedJson);
-
-        // Check expiry (exp is in seconds, Date.now() is in ms)
-        return payload.exp * 1000 < Date.now();
-    } catch (error) {
-        return true; // Treat invalid tokens as expired
-    }
-};
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-
-    // 1. Initialize State (sessionStorage + Expiry Check)
-    const [auth, setAuth] = useState<{ user: User | null; accessToken: string | null }>(() => {
-        // Clear old localStorage if it exists (Cleanup from previous version)
-        localStorage.removeItem("dd_admin_auth");
-
-        const storedAuth = sessionStorage.getItem("dd_admin_auth");
-
-        if (storedAuth) {
-            const parsedAuth = JSON.parse(storedAuth);
-
-            // 🛡️ SECURITY CHECK: Is the token expired?
-            if (isTokenExpired(parsedAuth.accessToken)) {
-                // Token expired? Clear storage and return null
-                sessionStorage.removeItem("dd_admin_auth");
-                return { user: null, accessToken: null };
-            }
-
-            // Token valid? Return it
-            return parsedAuth;
-        }
-
-        return { user: null, accessToken: null };
+    // 1. Store auth strictly in memory (React State), completely immune to XSS
+    const [auth, setAuth] = useState<{ user: User | null; accessToken: string | null }>({
+        user: null,
+        accessToken: null
     });
 
-    // 2. Sync with SessionStorage (Only persists while tab is open)
+    // 2. Add a loading state to prevent the "flicker" on page reload
+    const [isLoading, setIsLoading] = useState(true);
+
+    // 3. Silent Authentication on Mount
     useEffect(() => {
-        if (auth.accessToken) {
-            sessionStorage.setItem("dd_admin_auth", JSON.stringify(auth));
-        } else {
-            sessionStorage.removeItem("dd_admin_auth");
-        }
-    }, [auth]);
+        let isMounted = true;
 
-    // 3. Logout Function
-    const logout = () => {
-        setAuth({ user: null, accessToken: null });
+        const verifySession = async () => {
+            try {
+                // This automatically sends the HttpOnly Session Cookie to the backend
+                // If the tab wasn't closed, the cookie is still there, and we get a fresh access token!
+                const { data } = await axios.post('/auth/refresh-token');
+
+                if (isMounted) {
+                    setAuth({ user: data.user, accessToken: data.accessToken });
+                }
+            } catch (error) {
+                // No valid cookie found (or tab was previously closed). Stay logged out.
+                console.log("No active admin session found.");
+            } finally {
+                if (isMounted) setIsLoading(false);
+            }
+        };
+
+        verifySession();
+
+        // Cleanup from previous older versions
+        localStorage.removeItem("dd_admin_auth");
         sessionStorage.removeItem("dd_admin_auth");
-        localStorage.removeItem("dd_admin_auth"); // Just to be safe
 
-        // Optional: Force reload to clear any application state
-        window.location.href = '/login';
+        return () => { isMounted = false; };
+    }, []);
+
+    // 4. Secure Logout Function
+    const logout = async () => {
+        try {
+            // Tell the Node backend to blacklist the token in Redis and clear the cookie
+            await axios.post('/auth/logout');
+        } catch (error) {
+            console.error("Backend logout failed, forcing frontend clear.");
+        } finally {
+            // Wipe memory and force a hard reload to clear all React states
+            setAuth({ user: null, accessToken: null });
+            window.location.href = '/login';
+        }
     };
+
+    // 5. The Magic Gate: Show loader until we verify the session cookie
+    if (isLoading) {
+        return <Loader />;
+    }
 
     return (
         <AuthContext.Provider value={{ auth, setAuth, logout }}>
