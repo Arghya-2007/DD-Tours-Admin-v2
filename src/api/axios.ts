@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // 🚀 LIVE BACKEND URL
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const BASE_URL = "/api";
 
 export default axios.create({
     baseURL: BASE_URL,
