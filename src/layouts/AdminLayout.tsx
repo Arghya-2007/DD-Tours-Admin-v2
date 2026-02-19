@@ -12,12 +12,12 @@ import {
 } from 'lucide-react';
 import gsap from 'gsap';
 import axios from '../api/axios';
-import { useAuthStore } from '../store/authStore';
+import AuthContext from '../context/AuthProvider';
 import toast from 'react-hot-toast';
 
 const AdminLayout = () => {
     // 🚨 Pull in your Zustand store & React Router navigation
-    const { user, logout } = useAuthStore();
+    const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 

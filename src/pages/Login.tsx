@@ -2,13 +2,12 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import gsap from 'gsap';
 import axios from '../api/axios';
-import { useAuthStore } from '../store/authStore'; // 🚨 Switch to Zustand
+import AuthContext from '../context/AuthProvider';
 import toast from 'react-hot-toast';
 import { Lock, Mail, Loader2 } from 'lucide-react';
 
 const Login = () => {
-    // 🚨 Extract actions and state from Zustand
-    const { setAuth, isAuthenticated, user } = useAuthStore();
+    const { setAuth, isAuthenticated, user } = useContext(AuthContext);
 
     const navigate = useNavigate();
     const location = useLocation();
