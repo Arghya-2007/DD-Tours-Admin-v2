@@ -8,7 +8,7 @@ import {
     X,
     CheckCircle2,
     Loader2,
-    Compass // 👈 New Icon for Location/Type
+    Compass
 } from 'lucide-react';
 import useAxiosPrivate from '../../hooks/useAxiosPrivate.ts';
 import toast from 'react-hot-toast';
@@ -18,7 +18,7 @@ const CreateTour = () => {
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // 1. FORM STATE (Updated with New Fields)
+    // 1. FORM STATE
     const [formData, setFormData] = useState({
         tourTitle: '',
         tourPrice: '',
@@ -26,9 +26,8 @@ const CreateTour = () => {
         tourDescription: '',
         maxSeats: '',
 
-        // 🆕 NEW FIELDS
         startLocation: '',
-        tourType: 'Adventure', // Default Value
+        tourType: 'Adventure',
 
         // Date Logic
         isFixedDate: false,
@@ -36,7 +35,6 @@ const CreateTour = () => {
         fixedDate: '',
         bookingDeadline: '',
 
-        // Arrays
         coveredPlaces: '',
         includedItems: '',
     });
@@ -46,18 +44,15 @@ const CreateTour = () => {
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [isUploading, setIsUploading] = useState(false);
 
-    // Handle Text Inputs & Selects
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // Handle Toggle
     const handleToggle = () => {
         setFormData(prev => ({ ...prev, isFixedDate: !prev.isFixedDate }));
     };
 
-    // Handle File Selection
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
@@ -72,7 +67,6 @@ const CreateTour = () => {
         }
     };
 
-    // Remove Image
     const removeImage = (index: number) => {
         setSelectedFiles(prev => prev.filter((_, i) => i !== index));
         setPreviewUrls(prev => prev.filter((_, i) => i !== index));
@@ -81,7 +75,6 @@ const CreateTour = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // 🔍 Local Validation
         if (formData.tourDescription.length < 20) {
             toast.error("Description must be at least 20 characters long!");
             return;
@@ -94,9 +87,7 @@ const CreateTour = () => {
         setIsUploading(true);
 
         try {
-            // ==========================================
             // STEP A: UPLOAD IMAGES
-            // ==========================================
             const imageUrls: string[] = [];
 
             if (selectedFiles.length > 0) {
@@ -123,9 +114,7 @@ const CreateTour = () => {
 
             if (imageUrls.length === 0) throw new Error("Image upload failed.");
 
-            // ==========================================
             // STEP B: PREPARE FINAL DATA
-            // ==========================================
             const finalData = {
                 tourTitle: formData.tourTitle,
                 tourPrice: Number(formData.tourPrice),
@@ -133,30 +122,23 @@ const CreateTour = () => {
                 tourDescription: formData.tourDescription,
                 maxSeats: Number(formData.maxSeats),
                 availableSeats: Number(formData.maxSeats),
-
-                // 🆕 MAPPING NEW FIELDS
                 startLocation: formData.startLocation,
-                tourCategory: formData.tourType, // Backend expects 'tourCategory'
-
+                tourCategory: formData.tourType,
                 tourStatus: 'UPCOMING',
-
-                // Arrays
                 coveredPlaces: formData.coveredPlaces.split(',').map(s => s.trim()),
                 includedItems: formData.includedItems.split(',').map(s => s.trim()),
                 images: imageUrls,
 
-                // Date Logic
+                // 🚀 Date Logic Updated: bookingDeadline is no longer dependent on isFixedDate
                 isFixedDate: formData.isFixedDate,
                 fixedDate: formData.isFixedDate && formData.fixedDate ? new Date(formData.fixedDate) : undefined,
-                bookingDeadline: formData.isFixedDate && formData.bookingDeadline ? new Date(formData.bookingDeadline) : undefined,
-                expectedMonth: !formData.isFixedDate ? formData.expectedMonth : undefined
+                expectedMonth: !formData.isFixedDate ? formData.expectedMonth : undefined,
+                bookingDeadline: formData.bookingDeadline ? new Date(formData.bookingDeadline) : undefined,
             };
 
             console.log("🚀 Sending Final Payload:", finalData);
 
-            // ==========================================
             // STEP C: CREATE TOUR
-            // ==========================================
             await axiosPrivate.post('/tours', finalData);
 
             toast.success("Tour Created Successfully! 🚀");
@@ -187,13 +169,11 @@ const CreateTour = () => {
                     <h3 className="text-lg font-semibold text-white border-b border-gray-800 pb-2">Basic Details</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Title */}
                         <div>
                             <label className="block text-sm text-dd-text-muted mb-1">Tour Title</label>
                             <input required name="tourTitle" onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-orange outline-none" placeholder="e.g. Majestic Manali" />
                         </div>
 
-                        {/* Price */}
                         <div>
                             <label className="block text-sm text-dd-text-muted mb-1">Price (₹)</label>
                             <div className="relative">
@@ -202,7 +182,6 @@ const CreateTour = () => {
                             </div>
                         </div>
 
-                        {/* Duration */}
                         <div>
                             <label className="block text-sm text-dd-text-muted mb-1">Duration</label>
                             <div className="relative">
@@ -211,13 +190,11 @@ const CreateTour = () => {
                             </div>
                         </div>
 
-                        {/* Seats */}
                         <div>
                             <label className="block text-sm text-dd-text-muted mb-1">Total Seats</label>
                             <input required type="number" name="maxSeats" onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-orange outline-none" placeholder="30" />
                         </div>
 
-                        {/* 🆕 START LOCATION */}
                         <div>
                             <label className="block text-sm text-dd-text-muted mb-1">Start Location</label>
                             <div className="relative">
@@ -226,8 +203,7 @@ const CreateTour = () => {
                             </div>
                         </div>
 
-                        {/* 🆕 TOUR CATEGORY */}
-                        <div>
+                        <div className="relative">
                             <label className="block text-sm text-dd-text-muted mb-1">Tour Category</label>
                             <div className="relative">
                                 <Compass className="absolute left-3 top-3 text-gray-500" size={16}/>
@@ -253,12 +229,11 @@ const CreateTour = () => {
                     </div>
                 </div>
 
-                {/* SECTION 2: DATE LOGIC */}
+                {/* 🚀 SECTION 2: DATE LOGIC UPDATED */}
                 <div className="bg-dd-card p-6 rounded-xl border border-gray-800 space-y-4">
                     <div className="flex justify-between items-center border-b border-gray-800 pb-2">
                         <h3 className="text-lg font-semibold text-white">Schedule & Timing</h3>
 
-                        {/* TOGGLE SWITCH */}
                         <div className="flex items-center gap-3">
                             <span className={`text-sm ${!formData.isFixedDate ? 'text-dd-orange font-bold' : 'text-gray-500'}`}>Flexible Month</span>
                             <button
@@ -272,27 +247,30 @@ const CreateTour = () => {
                         </div>
                     </div>
 
-                    {formData.isFixedDate ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                            <div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* LEFT SIDE: Fixed Date OR Expected Month */}
+                        {formData.isFixedDate ? (
+                            <div className="animate-in fade-in slide-in-from-top-2">
                                 <label className="block text-sm text-dd-text-muted mb-1">Start Date</label>
                                 <input required type="date" name="fixedDate" onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-red outline-none" />
                             </div>
-                            <div>
-                                <label className="block text-sm text-dd-text-muted mb-1">Booking Deadline</label>
-                                <input required type="date" name="bookingDeadline" onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-red outline-none" />
+                        ) : (
+                            <div className="animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-sm text-dd-text-muted mb-1">Expected Month</label>
+                                <select name="expectedMonth" onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-orange outline-none">
+                                    {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
+                                        <option key={m} value={m}>{m}</option>
+                                    ))}
+                                </select>
                             </div>
+                        )}
+
+                        {/* RIGHT SIDE: Booking Deadline (Always Visible) */}
+                        <div>
+                            <label className="block text-sm text-dd-text-muted mb-1">Booking Deadline</label>
+                            <input required type="date" name="bookingDeadline" onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-orange outline-none" />
                         </div>
-                    ) : (
-                        <div className="animate-in fade-in slide-in-from-top-2">
-                            <label className="block text-sm text-dd-text-muted mb-1">Expected Month</label>
-                            <select name="expectedMonth" onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-orange outline-none">
-                                {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
-                                    <option key={m} value={m}>{m}</option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* SECTION 3: ARRAYS */}

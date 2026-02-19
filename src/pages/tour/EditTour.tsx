@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     MapPin, DollarSign, Clock, UploadCloud, X,
-    Loader2, Compass, ArrowLeft, Save
+    Loader2, Compass, ArrowLeft, Save, Activity
 } from 'lucide-react';
 import useAxiosPrivate from '../../hooks/useAxiosPrivate.ts';
 import toast from 'react-hot-toast';
@@ -25,10 +25,13 @@ const EditTour = () => {
         maxSeats: '',
         startLocation: '',
         tourType: 'Adventure',
+        tourStatus: 'UPCOMING', // 🆕 ADDED TOUR STATUS
+
         isFixedDate: false,
         expectedMonth: 'January',
         fixedDate: '',
         bookingDeadline: '',
+
         coveredPlaces: '',
         includedItems: '',
     });
@@ -42,7 +45,7 @@ const EditTour = () => {
     useEffect(() => {
         const fetchTour = async () => {
             try {
-                const response = await axiosPrivate.get(`/tours/id/${id}`); // Ensure this route exists in Backend!
+                const response = await axiosPrivate.get(`/tours/id/${id}`);
                 const data = response.data.data;
 
                 // Populate Form
@@ -54,6 +57,7 @@ const EditTour = () => {
                     maxSeats: data.maxSeats,
                     startLocation: data.startLocation || '',
                     tourType: data.tourCategory || 'Adventure',
+                    tourStatus: data.tourStatus || 'UPCOMING', // 🆕 POPULATE STATUS
                     isFixedDate: data.isFixedDate,
                     expectedMonth: data.expectedMonth || 'January',
                     // Format Dates for Input (YYYY-MM-DD)
@@ -150,18 +154,18 @@ const EditTour = () => {
                 maxSeats: Number(formData.maxSeats),
                 startLocation: formData.startLocation,
                 tourCategory: formData.tourType,
-                tourStatus: 'UPCOMING', // Or keep existing status if needed
+                tourStatus: formData.tourStatus, // 🆕 INCLUDED IN PAYLOAD
 
                 // Arrays
                 coveredPlaces: formData.coveredPlaces.split(',').map(s => s.trim()),
                 includedItems: formData.includedItems.split(',').map(s => s.trim()),
                 images: finalImages,
 
-                // Date Logic
+                // 🚀 Date Logic Updated
                 isFixedDate: formData.isFixedDate,
                 fixedDate: formData.isFixedDate && formData.fixedDate ? new Date(formData.fixedDate) : null,
-                bookingDeadline: formData.isFixedDate && formData.bookingDeadline ? new Date(formData.bookingDeadline) : null,
-                expectedMonth: !formData.isFixedDate ? formData.expectedMonth : null
+                expectedMonth: !formData.isFixedDate ? formData.expectedMonth : null,
+                bookingDeadline: formData.bookingDeadline ? new Date(formData.bookingDeadline) : null, // Always included
             };
 
             // Step D: Send Patch Request
@@ -235,13 +239,26 @@ const EditTour = () => {
                             <label className="block text-sm text-dd-text-muted mb-1">Category</label>
                             <div className="relative">
                                 <Compass className="absolute left-3 top-3 text-gray-500" size={16}/>
-                                <select name="tourType" value={formData.tourType} onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 pl-10 text-white focus:border-dd-orange outline-none">
+                                <select name="tourType" value={formData.tourType} onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 pl-10 text-white focus:border-dd-orange outline-none appearance-none">
                                     <option value="Adventure">Adventure</option>
                                     <option value="Relaxation">Relaxation</option>
                                     <option value="Pilgrimage">Pilgrimage</option>
                                     <option value="Honeymoon">Honeymoon</option>
                                     <option value="Road Trip">Road Trip</option>
                                     <option value="Family">Family</option>
+                                </select>
+                            </div>
+                        </div>
+                        {/* 🆕 ADDED TOUR STATUS */}
+                        <div className="md:col-span-2">
+                            <label className="block text-sm text-dd-text-muted mb-1">Tour Status</label>
+                            <div className="relative">
+                                <Activity className="absolute left-3 top-3 text-gray-500" size={16}/>
+                                <select name="tourStatus" value={formData.tourStatus} onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 pl-10 text-white focus:border-dd-orange outline-none appearance-none">
+                                    <option value="UPCOMING">UPCOMING</option>
+                                    <option value="ACTIVE">ACTIVE</option>
+                                    <option value="COMPLETED">COMPLETED</option>
+                                    <option value="CANCELLED">CANCELLED</option>
                                 </select>
                             </div>
                         </div>
@@ -252,7 +269,7 @@ const EditTour = () => {
                     </div>
                 </div>
 
-                {/* 2. DATES */}
+                {/* 2. DATES UPDATED */}
                 <div className="bg-dd-card p-6 rounded-xl border border-gray-800 space-y-4">
                     <div className="flex justify-between items-center border-b border-gray-800 pb-2">
                         <h3 className="text-lg font-semibold text-white">Schedule</h3>
@@ -265,27 +282,30 @@ const EditTour = () => {
                         </div>
                     </div>
 
-                    {formData.isFixedDate ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* LEFT SIDE: Fixed Date OR Expected Month */}
+                        {formData.isFixedDate ? (
+                            <div className="animate-in fade-in slide-in-from-top-2">
                                 <label className="block text-sm text-dd-text-muted mb-1">Start Date</label>
                                 <input required type="date" name="fixedDate" value={formData.fixedDate} onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-red outline-none" />
                             </div>
-                            <div>
-                                <label className="block text-sm text-dd-text-muted mb-1">Booking Deadline</label>
-                                <input required type="date" name="bookingDeadline" value={formData.bookingDeadline} onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-red outline-none" />
+                        ) : (
+                            <div className="animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-sm text-dd-text-muted mb-1">Expected Month</label>
+                                <select name="expectedMonth" value={formData.expectedMonth} onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-orange outline-none">
+                                    {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
+                                        <option key={m} value={m}>{m}</option>
+                                    ))}
+                                </select>
                             </div>
-                        </div>
-                    ) : (
+                        )}
+
+                        {/* RIGHT SIDE: Booking Deadline (Always Visible) */}
                         <div>
-                            <label className="block text-sm text-dd-text-muted mb-1">Expected Month</label>
-                            <select name="expectedMonth" value={formData.expectedMonth} onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-orange outline-none">
-                                {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
-                                    <option key={m} value={m}>{m}</option>
-                                ))}
-                            </select>
+                            <label className="block text-sm text-dd-text-muted mb-1">Booking Deadline</label>
+                            <input required type="date" name="bookingDeadline" value={formData.bookingDeadline} onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-orange outline-none" />
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* 3. ITINERARY */}
@@ -294,7 +314,10 @@ const EditTour = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm text-dd-text-muted mb-1">Covered Places (Comma separated)</label>
-                            <input required name="coveredPlaces" value={formData.coveredPlaces} onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 text-white focus:border-dd-orange outline-none" />
+                            <div className="relative">
+                                <MapPin className="absolute left-3 top-3 text-gray-500" size={16}/>
+                                <input required name="coveredPlaces" value={formData.coveredPlaces} onChange={handleChange} className="w-full bg-dd-sidebar border border-gray-700 rounded-lg p-3 pl-10 text-white focus:border-dd-orange outline-none" />
+                            </div>
                         </div>
                         <div>
                             <label className="block text-sm text-dd-text-muted mb-1">Included Items (Comma separated)</label>
